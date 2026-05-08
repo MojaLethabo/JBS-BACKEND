@@ -1,0 +1,80 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Organizer {
+  id              String    @id @default(cuid())
+  email           String    @unique
+  passwordHash    String
+  name            String?
+  emailVerified   Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  events          Event[]
+  verifyTokens    EmailVerifyToken[]
+  resetTokens     PasswordResetToken[]
+}
+
+model EmailVerifyToken {
+  id          String   @id @default(cuid())
+  token       String   @unique
+  organizerId String
+  organizer   Organizer @relation(fields: [organizerId], references: [id], onDelete: Cascade)
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+
+  @@index([organizerId])
+}
+
+model PasswordResetToken {
+  id          String   @id @default(cuid())
+  token       String   @unique
+  organizerId String
+  organizer   Organizer @relation(fields: [organizerId], references: [id], onDelete: Cascade)
+  expiresAt   DateTime
+  used        Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([organizerId])
+}
+
+model Event {
+  id                  String    @id @default(cuid())
+  eventToken          String    @unique
+  name                String
+  startDate           DateTime
+  durationDays        Int
+  organizerId         String
+  organizer           Organizer @relation(fields: [organizerId], references: [id], onDelete: Cascade)
+  guests              Guest[]
+  createdAt           DateTime  @default(now())
+  /// JSON array of required registration fields
+  registrationFields  String    @default("[\"name\",\"surname\",\"email\"]")
+}
+
+model Guest {
+  id               String    @id @default(cuid())
+  eventId          String
+  event            Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  name             String
+  surname          String
+  email            String
+  mobileNumber     String?
+  organisation     String?
+  jobTitle         String?
+  location         String?
+  organisationType String?
+  otherOrgType     String?
+  qrToken          String    @unique
+  checkedInAt      DateTime?
+  createdAt        DateTime  @default(now())
+
+  @@unique([eventId, email])
+  @@index([eventId])
+  @@index([qrToken])
+}
